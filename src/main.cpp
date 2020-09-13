@@ -28,7 +28,7 @@ void sendString(Cereal& cereal, const std::string& value) {
   std::uint8_t pairity = 0;
   for (auto i = 0; i < value.size(); i++) {
     cereal.write_byte(value[i]);
-    D("Progress: %08lld/%08lld\r", i, value.size());
+    D("Progress: %08lld/%08lld\r", i + 1, value.size());
     pairity |= (value[i] & 0x1);
   }
   D("\nSending pairity...\n");
@@ -56,18 +56,21 @@ void sendBaud(Cereal& cereal, std::uint32_t baud) {
 void sendShutdown(Cereal& cereal) {
   D("Sending command 0x3\n");
   cereal.write_byte(0x03);
-  D("Sending shutdown is done");
+  D("Sending shutdown is done\n");
 }
 
 void server() {
   fprintf(stderr, "Server\n");
   Cereal server("COM2", 115200);
-  server.open();
+  if (auto error = server.open(); error != ERROR_SUCCESS) {
+    fprintf(stderr, "Failed to open server %d\n", error);
+    return;
+  }
   fprintf(stderr, "init: %d\n", server.init());
   while (true) {
     auto ctrl = server.read_byte();
     switch (ctrl) {
-    case 0x01: {
+    case 0x01: { 
       auto length = server.read_int32();
       std::string buffer;
       std::uint8_t pairity = 0;
@@ -102,21 +105,24 @@ void server() {
 void client() {
   fprintf(stderr, "Client\n");
   Cereal client("COM3", 1115200);
-  client.open();
+  if (auto error = client.open(); error != ERROR_SUCCESS) {
+    fprintf(stderr, "Failed to open client %d\n", error);
+    return;
+  }
   fprintf(stderr, "init: %d\n", client.init());
   while (true) {
     std::cout << ">> ";
     std::string cmd;
     std::getline(std::cin, cmd);
     switch (cmd[0]) {
-    case 's': case 'S': {
+    case 's': case 'S': { // send string
       std::cout << "S >> ";
       std::string string;
       std::getline(std::cin, string);
       sendString(client, string);
       break;
     }
-    case 'b': case 'B': {
+    case 'b': case 'B': { // change baud rate on client and server
       std::cout << "B >> ";
       std::string buffer;
       std::getline(std::cin, buffer);
@@ -126,7 +132,27 @@ void client() {
       fprintf(stderr, "re-init: %d\n", client.init());
       break;
     }
-    case 'q': case 'Q': {
+    case 'c': case 'C': { // change baud rate on client OR server
+      std::cout << cmd << " >> ";
+      std::string buffer;
+      std::getline(std::cin, buffer);
+      int baud = std::stoi(buffer);
+      char op = 'c';
+      if (cmd.size() > 1 && cmd[1] == 's') {
+        op = 's';
+      }
+
+      if (op == 's') {
+        fprintf(stderr, "Change server baud rate to %d\n", baud);
+        sendBaud(client, baud);
+      } else {
+        fprintf(stderr, "Change client baud rate to %d\n", baud);
+        client.set_baud_rate(baud);
+        client.init();
+      }
+      break;
+    }
+    case 'q': case 'Q': { // shutdown server
       sendShutdown(client);
       break;
     }
