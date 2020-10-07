@@ -139,12 +139,6 @@ public:
                 ui->clientPort->setCurrentIndex(newIndex);
             }
         });
-        connectChanged(ui->baudRate, [&](auto) {
-            if (!isInitialized) return;
-            writeByte(0x2);
-            initSerialPort(ui->serverPort->currentText(), serverHandle);
-            initSerialPort(ui->clientPort->currentText(), clientHandle);
-        });
         connect(ui->connectButton, &QPushButton::clicked, [&]() {
             if (isInitialized) {
                 writeByte(0x2);
@@ -274,6 +268,7 @@ public:
         ui->byteSize->setDisabled(isInitialized);
         ui->stopBits->setDisabled(isInitialized);
         ui->pairity->setDisabled(isInitialized);
+        ui->baudRate->setDisabled(isInitialized);
         ui->sendButton->setDisabled(!isInitialized);
         ui->connectButton->setText(isInitialized ? "Disconnect" : "Connect");
     }
