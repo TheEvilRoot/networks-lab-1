@@ -199,13 +199,13 @@ public:
 
         clientHandle = CreateFileA(clientPort.toStdString().c_str(), GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
         if (clientHandle == INVALID_HANDLE_VALUE) {
-            ui->stateView_2->setText("Failed to open " + clientPort + " " + QString::number(GetLastError()));
+            ui->stateView_2->setText("Failed to open " + clientPort);
             return false;
         }
 
         serverHandle = CreateFileA(serverPort.toStdString().c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
         if (serverHandle == INVALID_HANDLE_VALUE) {
-            ui->stateView_2->setText("Failed to open " + serverPort + " " + QString::number(GetLastError()));
+            ui->stateView_2->setText("Failed to open " + serverPort);
             CloseHandle(clientHandle);
             clientHandle = INVALID_HANDLE_VALUE;
             return false;
@@ -213,39 +213,13 @@ public:
         return true;
     }
 
-    BYTE getPairity() {
-        auto index = ui->pairity->currentIndex();
-        if (index == 0) return NOPARITY;
-        if (index == 1) return ODDPARITY;
-        return EVENPARITY;
-    }
-
-    BYTE getByteSize() {
-        auto index = ui->byteSize->currentIndex();
-        if (index == 0) return DATABITS_8;
-        if (index == 1) return DATABITS_7;
-        if (index == 2) return DATABITS_6;
-        return DATABITS_5;
-    }
-
-    BYTE getStopBits() {
-        auto index = ui->stopBits->currentIndex();
-        if (index == 0) return STOPBITS_10;
-        if (index == 1) return STOPBITS_15;
-        return STOPBITS_20;
-    }
-
     bool initSerialPort(QString name, HANDLE handle) {
-        auto baudRate = ui->baudRate->currentText().toULong();
-        auto pairity = getPairity();
-        auto byteSize = getByteSize();
-        auto stopBits = getStopBits();
         DCB params;
         if (GetCommState(handle, &params)) {
-            params.BaudRate = baudRate;
-            params.ByteSize = byteSize;
-            params.StopBits = stopBits;
-            params.Parity = pairity;
+            params.BaudRate = BAUD_115200;
+            params.ByteSize = DATABITS_8;
+            params.StopBits = STOPBITS_10;
+            params.Parity = NOPARITY;
             params.fDtrControl = DTR_CONTROL_ENABLE;
 
             if (SetCommState(handle, &params)) {
@@ -265,10 +239,6 @@ public:
         isInitialized = newState;
         ui->clientPort->setDisabled(isInitialized);
         ui->serverPort->setDisabled(isInitialized);
-        ui->byteSize->setDisabled(isInitialized);
-        ui->stopBits->setDisabled(isInitialized);
-        ui->pairity->setDisabled(isInitialized);
-        ui->baudRate->setDisabled(isInitialized);
         ui->sendButton->setDisabled(!isInitialized);
         ui->connectButton->setText(isInitialized ? "Disconnect" : "Connect");
     }
